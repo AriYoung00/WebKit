@@ -238,6 +238,7 @@ public:
     bool hasPageAction();
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+    bool hasSidebar();
     CocoaImage *sidebarIcon(CGSize idealSize);
     NSString *sidebarDocumentPath();
     NSString *sidebarTitle();

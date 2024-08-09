@@ -25,6 +25,8 @@
 
 #import <WebKit/WKWebExtensionControllerDelegate.h>
 
+@class _WKWebExtensionSidebar;
+
 WK_HEADER_AUDIT_BEGIN(nullability, sendability)
 
 WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA))
@@ -66,6 +68,8 @@ WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA))
  @discussion The app can use this to setup additional properties on the web view before it is loaded. Default implementation does nothing.
  */
 - (void)_webExtensionController:(WKWebExtensionController *)controller didCreateBackgroundWebView:(WKWebView *)webView forExtensionContext:(WKWebExtensionContext *)context;
+
+- (void)_webExtensionController:(WKWebExtensionController *)controller presentSidebar:(_WKWebExtensionSidebar *)sidebar forExtensionContext:(WKWebExtensionContext *)context completionHandler:(void (^)(NSError * _Nullable error))completionHandler;
 
 @end
 

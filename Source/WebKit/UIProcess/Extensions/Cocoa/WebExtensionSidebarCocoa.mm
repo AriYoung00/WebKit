@@ -33,9 +33,12 @@
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
 
 #import "CocoaHelpers.h"
+#import "WKWebExtensionControllerDelegatePrivate.h"
 #import "WebExtensionContext.h"
 #import "WebExtensionTab.h"
 #import "WebExtensionWindow.h"
+
+#import <wtf/BlockPtr.h>
 
 namespace WebKit {
 
@@ -179,6 +182,29 @@ bool WebExtensionSidebar::canProgrammaticallyOpenSidebar() const
 void WebExtensionSidebar::openSidebarWhenReady()
 {
     // FIXME: <https://webkit.org/b/277575> implement openSidebarWhenReady
+    if (!extensionContext())
+        return;
+
+    if (m_opensSidebarWhenReady || m_sidebarOpened || m_isOpen || !canProgrammaticallyOpenSidebar() || !opensSidebar())
+        return;
+
+    m_opensSidebarWhenReady = true;
+    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }]() {
+        if (!extensionContext() || !m_opensSidebarWhenReady)
+            return;
+
+        ASSERT(m_webView);
+
+        RefPtr extensionController = extensionContext().value()->extensionController();
+        auto delegate = extensionController ? extensionController->delegate() : nil;
+
+        if (!delegate || ![delegate respondsToSelector:@selector(_webExtensionController:presentSidebar:forExtensionContext:completionHandler:)]) {
+            closeSidebarWhenReady();
+            return;
+        }
+
+
+    }).get());
 }
 
 bool WebExtensionSidebar::canProgrammaticallyCloseSidebar() const
@@ -209,6 +235,24 @@ void WebExtensionSidebar::setSidebarPath(std::optional<String> sidebarPath)
 
 WKWebView *WebExtensionSidebar::webView()
 {
+    if (!opensSidebar() || !extensionContext())
+        return nil;
+
+    if (m_webView)
+        return m_webView.get();
+
+    auto *webViewConfiguration = extensionContext().value()->webViewConfiguration(WebExtensionContext::WebViewPurpose::Sidebar);
+    m_webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:webViewConfiguration];
+    m_webView.get().inspectable = extensionContext().value()->isInspectable();
+    m_webView.get().accessibilityLabel = title();
+
+    auto url = URL { extensionContext().value()->baseURL(), sidebarPath() };
+
+    NSString *urlString = url.string();
+    NSLog(@"AAAA loading url: %@", urlString);
+
+    [m_webView loadRequest:[NSURLRequest requestWithURL:url]];
+
     return m_webView.get();
 }
 

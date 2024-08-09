@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,24 +23,40 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKWebExtensionContext.h>
+#import <Foundation/Foundation.h>
+#import <WebKit/WKFoundation.h>
+
+@class WKWebExtensionContext;
+@class WKWebView;
+@protocol WKWebExtensionTab;
+@protocol WKWebExtension;
 
 WK_HEADER_AUDIT_BEGIN(nullability, sendability)
 
-@class _WKWebExtensionSidebar;
+WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA))
+NS_SWIFT_NAME(WKWebExtension.Sidebar)
+@interface _WKWebExtensionSidebar : NSObject
 
-@interface WKWebExtensionContext ()
+- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)new NS_UNAVAILABLE;
 
-/*! @abstract The extension background view used for the extension, or `nil` if the extension does not have background content or it is currently unloaded. */
-@property (nonatomic, nullable, readonly) WKWebView *_backgroundWebView;
+@property (nonatomic, readonly, weak) WKWebExtensionContext *webExtensionContext;
 
-/*! @abstract The extension background content URL for the extension, or `nil` if the extension does not have background content. */
-@property (nonatomic, nullable, readonly) NSURL *_backgroundContentURL;
+@property (nonatomic, readonly, nullable, weak) id <WKWebExtensionTab> associatedTab;
 
-- (nullable _WKWebExtensionSidebar *)sidebarForTab:(nullable id <WKWebExtensionTab>)tab NS_SWIFT_NAME(sidebar(for:));
+@property (nonatomic, readonly, copy) NSString *title;
 
-- (void)openSidebarForTab:(nullable id <WKWebExtensionTab>)tab NS_SWIFT_NAME(openSidebar(for:));
 
-@end
+@property (nonatomic, readonly, getter=isEnabled) BOOL enabled;
+
+@property (nonatomic, readonly) BOOL opensSidebar;
+
+@property (nonatomic, readonly, nullable) WKWebView *webView;
+
+- (void)openSidebar;
+- (void)closeSidebar;
+- (NSImage *)iconForSize:(CGSize)size;
+
+@end // interface _WKWebExtensionSidebar
 
 WK_HEADER_AUDIT_END(nullability, sendability)

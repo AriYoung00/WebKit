@@ -68,7 +68,7 @@ WK_SWIFT_UI_ACTOR NS_SWIFT_NAME(WKWebExtension.Action)
 
 /*!
  @abstract Returns the action icon for the specified size.
- @param size The size to use when looking up the action icon.
+ @param size The size to use when looking up the action icon
  @result The action icon, or `nil` if the icon was unable to be loaded.
  @discussion This icon should represent the extension in action sheets or toolbars. The returned image will be the best match for the specified
  size that is available in the extension's action icon set. If no matching icon is available, the method will fall back to the extension's icon.

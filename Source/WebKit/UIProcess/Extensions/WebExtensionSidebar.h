@@ -34,6 +34,7 @@
 #include <wtf/text/WTFString.h>
 
 OBJC_CLASS WKWebView;
+OBJC_CLASS _WKWebExtensionSidebar;
 
 namespace WebKit {
 
@@ -90,6 +91,10 @@ public:
     void setSidebarPath(std::optional<String>);
 
     WKWebView *webView();
+
+#ifdef __OBJC__
+    _WKWebExtensionSidebar *wrapper() const { return (_WKWebExtensionSidebar *)API::ObjectImpl<API::Object::Type::WebExtensionSidebar>::wrapper(); }
+#endif
 
 private:
     explicit WebExtensionSidebar(WebExtensionContext&, std::optional<Ref<WebExtensionTab>>, std::optional<Ref<WebExtensionWindow>>, IsDefault);

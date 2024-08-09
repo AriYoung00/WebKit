@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,24 +23,26 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKWebExtensionContext.h>
+#import "_WKWebExtensionSidebar.h"
 
-WK_HEADER_AUDIT_BEGIN(nullability, sendability)
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
 
-@class _WKWebExtensionSidebar;
+#import "WKObject.h"
+#import "WebExtensionSidebar.h"
 
-@interface WKWebExtensionContext ()
+namespace WebKit {
+template<> struct WrapperTraits<WebExtensionSidebar> {
+    using WrapperClass = _WKWebExtensionSidebar;
+};
+}
 
-/*! @abstract The extension background view used for the extension, or `nil` if the extension does not have background content or it is currently unloaded. */
-@property (nonatomic, nullable, readonly) WKWebView *_backgroundWebView;
+@interface _WKWebExtensionSidebar () <WKObject> {
+@package
+    API::ObjectStorage<WebKit::WebExtensionSidebar> _webExtensionSidebar;
+}
 
-/*! @abstract The extension background content URL for the extension, or `nil` if the extension does not have background content. */
-@property (nonatomic, nullable, readonly) NSURL *_backgroundContentURL;
-
-- (nullable _WKWebExtensionSidebar *)sidebarForTab:(nullable id <WKWebExtensionTab>)tab NS_SWIFT_NAME(sidebar(for:));
-
-- (void)openSidebarForTab:(nullable id <WKWebExtensionTab>)tab NS_SWIFT_NAME(openSidebar(for:));
+@property (nonatomic, readonly) WebKit::WebExtensionSidebar& _webExtensionSidebar;
 
 @end
 
-WK_HEADER_AUDIT_END(nullability, sendability)
+#endif // ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)

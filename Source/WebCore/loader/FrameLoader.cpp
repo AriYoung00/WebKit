@@ -496,6 +496,7 @@ void FrameLoader::changeLocation(FrameLoadRequest&& frameRequest, Event* trigger
     FRAMELOADER_RELEASE_LOG(ResourceLoading, "changeLocation: frame load started");
     ASSERT(frameRequest.resourceRequest().httpMethod() == "GET"_s);
 
+
     Ref frame = m_frame.get();
 
     if (frameRequest.frameName().isEmpty())

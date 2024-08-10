@@ -764,6 +764,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
 - (WKNavigation *)loadRequest:(NSURLRequest *)request
 {
     THROW_IF_SUSPENDED;
+    NSLog(@"AAAA web view is loading %@", request.URL);
     if (_page->isServiceWorkerPage())
         [NSException raise:NSInternalInconsistencyException format:@"The WKWebView was used to load a service worker"];
     return wrapper(_page->loadRequest(request)).autorelease();

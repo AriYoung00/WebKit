@@ -34,11 +34,74 @@
 
 #import "CocoaHelpers.h"
 #import "WKWebExtensionControllerDelegatePrivate.h"
+#import "WKWebViewConfigurationPrivate.h"
+#import "WKWebViewInternal.h"
 #import "WebExtensionContext.h"
 #import "WebExtensionTab.h"
 #import "WebExtensionWindow.h"
+#import "WKNavigationPrivate.h"
+#import "WKNavigationDelegate.h"
+#import "WKNavigationDelegatePrivate.h"
+#import "WKUIDelegatePrivate.h"
+#import "WKNavigationAction.h"
 
 #import <wtf/BlockPtr.h>
+
+@interface _WKWebExtensionSidebarWebViewDelegate : NSObject <WKNavigationDelegatePrivate /*, WKUIDelegatePrivate*/>
+@end
+
+@implementation _WKWebExtensionSidebarWebViewDelegate {
+    WeakPtr<WebKit::WebExtensionSidebar> _webExtensionSidebar;
+}
+
+- (instancetype)initWithWebExtensionSidebar:(WebKit::WebExtensionSidebar&)sidebar
+{
+    if (!(self = [super init]))
+        return nil;
+
+    _webExtensionSidebar = sidebar;
+
+    return self;
+}
+
+- (void)_webView:(WKWebView *)webView navigationDidFinishDocumentLoad:(WKNavigation *)navigation
+{
+    NSLog(@"AAAA did navigation to %@", navigation._request.URL);
+}
+
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView
+{
+    NSLog(@"AAAA sidebar web view just terminated");
+}
+
+- (void)webViewDidClose:(WKWebView *)webView
+{
+    NSLog(@"AAAA sidebar web view just closed");
+}
+
+- (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error
+{
+    NSLog(@"AAAA sidebar failed provisional navigation to %@", navigation._request.URL);
+}
+
+- (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error
+{
+    NSLog(@"AAAA sidebar failed non-provisional navigation to %@", navigation._request.URL);
+}
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
+{
+    if ([navigationAction.request.URL.absoluteString rangeOfString:@"_generated_background_page.html"].location != NSNotFound) {
+        NSLog(@"AAAA intercepted request to navigate to background page");
+        decisionHandler(WKNavigationActionPolicyCancel);
+        return;
+    }
+
+    NSLog(@"AAAA sidebar wants to navigate to %@", navigationAction.request.URL);
+    decisionHandler(WKNavigationActionPolicyAllow);
+}
+
+@end
 
 namespace WebKit {
 
@@ -104,7 +167,11 @@ std::optional<Ref<WebExtensionSidebar>> WebExtensionSidebar::parent() const
     if (!m_context.ptr() || isDefaultSidebar())
         return std::nullopt;
 
-    return m_tab.and_then([this](auto const& tab) { return m_context->getSidebar(*tab->window()); })
+    return m_tab.and_then([this](auto const& tab) -> std::optional<Ref<WebExtensionSidebar>> {
+        if (auto window = tab->window())
+            return m_context->getSidebar(*window);
+        return std::nullopt;
+    })
         .value_or(m_context->defaultSidebar());
 }
 
@@ -235,16 +302,22 @@ void WebExtensionSidebar::setSidebarPath(std::optional<String> sidebarPath)
 
 WKWebView *WebExtensionSidebar::webView()
 {
+    static _WKWebExtensionSidebarWebViewDelegate *webViewDelegate;
+
     if (!opensSidebar() || !extensionContext())
         return nil;
 
     if (m_webView)
         return m_webView.get();
 
+    if (!webViewDelegate)
+        webViewDelegate = [[_WKWebExtensionSidebarWebViewDelegate alloc] initWithWebExtensionSidebar:*this];
+
     auto *webViewConfiguration = extensionContext().value()->webViewConfiguration(WebExtensionContext::WebViewPurpose::Sidebar);
     m_webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:webViewConfiguration];
     m_webView.get().inspectable = extensionContext().value()->isInspectable();
     m_webView.get().accessibilityLabel = title();
+    m_webView.get().navigationDelegate = webViewDelegate;
 
     auto url = URL { extensionContext().value()->baseURL(), sidebarPath() };
 

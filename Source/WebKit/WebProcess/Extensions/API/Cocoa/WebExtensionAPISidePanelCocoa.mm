@@ -143,16 +143,31 @@ void WebExtensionAPISidePanel::setOptions(NSDictionary *options, Ref<WebExtensio
     }, extensionContext().identifier());
 }
 
+static bool tmp_bad_panel_behavior_for_the_love_of_god_remove_this = false;
 void WebExtensionAPISidePanel::getPanelBehavior(Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
 {
     // FIXME: <https://webkit.org/b/276833> Implement panel behavior methods
-    callback->reportError(@"unimplemented");
+//    callback->reportError(@"unimplemented");
+    callback->call(@{
+        @"openPanelOnActionClick" : @(tmp_bad_panel_behavior_for_the_love_of_god_remove_this),
+    });
 }
 
 void WebExtensionAPISidePanel::setPanelBehavior(NSDictionary *behavior, Ref<WebExtensionCallbackHandler>&& callback, NSString** outExceptionString)
 {
     // FIXME: <https://webkit.org/b/276833> Implement panel behavior methods
-    callback->reportError(@"unimplemented");
+//    callback->reportError(@"unimplemented");
+    id maybeBehavior = [behavior objectForKey:@"openPanelOnActionClick"];
+    if (!maybeBehavior)
+        goto finish;
+
+    if (![maybeBehavior isKindOfClass:NSNumber.class])
+        goto finish;
+
+    tmp_bad_panel_behavior_for_the_love_of_god_remove_this = [((NSNumber *) maybeBehavior) boolValue];
+
+finish:
+    callback->call();
 }
 
 void WebExtensionAPISidePanel::open(NSDictionary *options, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)

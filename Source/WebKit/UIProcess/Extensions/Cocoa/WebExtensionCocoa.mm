@@ -1123,6 +1123,10 @@ void WebExtension::populateActionPropertiesIfNeeded()
 }
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+bool WebExtension::hasSidebar()
+{
+    return objectForKey<NSDictionary>(m_manifest, sidebarActionManifestKey) || hasRequestedPermission(WKWebExtensionPermissionSidePanel);
+}
 CocoaImage *WebExtension::sidebarIcon(CGSize idealSize)
 {
     // FIXME: <https://webkit.org/b/276833> implement this

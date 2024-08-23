@@ -92,7 +92,7 @@ OBJC_CLASS NSMapTable;
 OBJC_CLASS NSMutableDictionary;
 OBJC_CLASS NSNumber;
 OBJC_CLASS NSString;
-OBJC_CLASS NSURL;
+//OBJC_CLASS NSURL;
 OBJC_CLASS NSUUID;
 OBJC_CLASS WKContentRuleListStore;
 OBJC_CLASS WKNavigation;
@@ -442,6 +442,7 @@ public:
     void performAction(WebExtensionTab*, UserTriggered = UserTriggered::No);
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+
     WebExtensionSidebar& defaultSidebar();
     std::optional<Ref<WebExtensionSidebar>> getSidebar(WebExtensionWindow const&);
     std::optional<Ref<WebExtensionSidebar>> getSidebar(WebExtensionTab const&);

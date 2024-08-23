@@ -2229,6 +2229,11 @@ framework module WebKit_Private [system] {
     export *
   }
 
+  explicit module _WKWebExtensionSidebar {
+    header "_WKWebExtensionSidebar.h"
+    export *
+  }
+
   explicit module _WKWebExtensionCommand {
     header "_WKWebExtensionCommand.h"
     export *

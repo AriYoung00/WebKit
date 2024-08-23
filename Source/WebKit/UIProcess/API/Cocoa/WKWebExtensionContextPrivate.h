@@ -27,6 +27,8 @@
 
 WK_HEADER_AUDIT_BEGIN(nullability, sendability)
 
+@class _WKWebExtensionSidebar;
+
 @interface WKWebExtensionContext ()
 
 /*! @abstract The extension background view used for the extension, or `nil` if the extension does not have background content or it is currently unloaded. */
@@ -34,6 +36,10 @@ WK_HEADER_AUDIT_BEGIN(nullability, sendability)
 
 /*! @abstract The extension background content URL for the extension, or `nil` if the extension does not have background content. */
 @property (nonatomic, nullable, readonly) NSURL *_backgroundContentURL;
+
+- (nullable _WKWebExtensionSidebar *)sidebarForTab:(nullable id <WKWebExtensionTab>)tab NS_SWIFT_NAME(sidebar(for:));
+
+- (void)openSidebarForTab:(nullable id <WKWebExtensionTab>)tab NS_SWIFT_NAME(openSidebar(for:));
 
 @end
 

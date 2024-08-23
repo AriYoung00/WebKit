@@ -1229,4 +1229,51 @@ static inline OptionSet<WebKit::WebExtensionTab::ChangedProperties> toImpl(WKWeb
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)
 
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+
+- (nullable _WKWebExtensionSidebar *)sidebarForTab:(id<WKWebExtensionTab>)tab
+{
+    NSLog(@"AAAA sidebarForTab, extension: %@, hasSidebar: %d, tab: %p", _webExtensionContext->extension().displayName(), _webExtensionContext->extension().hasSidebar(), tab);
+    if (!_webExtensionContext->extension().hasSidebar())
+        return nil;
+
+    if (tab)
+        NSParameterAssert([tab conformsToProtocol:@protocol(WKWebExtensionTab)]);
+
+    RefPtr tabImpl = toImplNullable(tab, *_webExtensionContext);
+    if (!tabImpl)
+        return (_WKWebExtensionSidebar *) _webExtensionContext->defaultSidebar().wrapper();
+
+    return _webExtensionContext->getOrCreateSidebar(*tabImpl)
+        .and_then([](Ref<WebKit::WebExtensionSidebar> const& sidebar) -> std::optional<_WKWebExtensionSidebar *> {
+            return (_WKWebExtensionSidebar *) sidebar->wrapper();
+        })
+        .value_or(nil);
+}
+
+- (void)openSidebarForTab:(id<WKWebExtensionTab>)tab
+{
+    if (!_webExtensionContext->extension().hasSidebar())
+        return;
+
+    RefPtr tabImpl = toImplNullable(tab, *_webExtensionContext);
+    if (!tabImpl)
+        return;
+
+    _webExtensionContext->openSidebarForTab(*tabImpl);
+}
+
+#else
+
+- (nullable _WKWebExtensionSidebar *)sidebarForTab:(id<WKWebExtensionTab>)tab
+{
+    return nil;
+}
+
+- (void)openSidebarForTab:(id<WKWebExtensionTab>)tab
+{
+}
+
+#endif // ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+
 @end

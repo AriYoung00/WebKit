@@ -94,11 +94,6 @@ public:
 
     bool isOpen() const { return m_isOpen; }
     bool opensSidebar() { return !sidebarPath().isEmpty(); };
-    bool canProgrammaticallyOpenSidebar() const;
-    void openSidebarWhenReady();
-
-    bool canProgrammaticallyCloseSidebar() const;
-    void closeSidebarWhenReady();
 
     /// `sidebarPath()` will return the overriden path of this sidebar, or the path of the first parent sidebar in which the path is set
     String sidebarPath() const;

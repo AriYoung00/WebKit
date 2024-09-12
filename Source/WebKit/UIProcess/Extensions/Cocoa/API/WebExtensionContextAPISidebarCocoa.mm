@@ -206,6 +206,11 @@ void WebExtensionContext::sidebarOpen(const std::optional<WebExtensionWindowIden
         return;
     }
 
+    if (!hasActiveUserGesture(*tab)) {
+        completionHandler(toWebExtensionError(nil, nil, @"open can only be called in response to a user gesture"));
+        return;
+    }
+
     std::optional<Ref<WebExtensionSidebar>> sidebar = getOrCreateSidebar(*tab);
 
     if (!sidebar) {
@@ -234,6 +239,11 @@ void WebExtensionContext::sidebarClose(CompletionHandler<void(Expected<void, Web
     auto tab = window->activeTab();
     if (!tab) {
         completionHandler(toWebExtensionError(nil, nil, @"unable to determine the active tab"));
+        return;
+    }
+
+    if (!hasActiveUserGesture(*tab)) {
+        completionHandler(toWebExtensionError(nil, nil, @"close can only be called in response to a user gesture"));
         return;
     }
 
@@ -289,6 +299,11 @@ void WebExtensionContext::sidebarToggle(CompletionHandler<void(Expected<void, We
     auto tab = window->activeTab();
     if (!tab) {
         completionHandler(toWebExtensionError(nil, nil, @"unable to determine the active tab"));
+        return;
+    }
+
+    if (!hasActiveUserGesture(*tab)) {
+        completionHandler(toWebExtensionError(nil, nil, @"toggle can only be called in response to a user gesture"));
         return;
     }
 

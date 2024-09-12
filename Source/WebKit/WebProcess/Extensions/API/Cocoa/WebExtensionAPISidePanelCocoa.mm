@@ -60,7 +60,7 @@ static ParseResult parseTabIdentifier(NSDictionary *options)
 
 static ParseResult parseWindowIdentifier(NSDictionary *options)
 {
-    id maybeWindowId = [options objectForKey:tabIdKey];
+    id maybeWindowId = [options objectForKey:windowIdKey];
 
     if (!maybeWindowId || [maybeWindowId isKindOfClass:NSNull.class])
         return std::monostate();

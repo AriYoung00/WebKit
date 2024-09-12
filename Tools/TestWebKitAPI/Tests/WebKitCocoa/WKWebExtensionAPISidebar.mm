@@ -30,6 +30,8 @@
 
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/_WKFeature.h>
+#import <WebKit/_WKWebExtensionSidebar.h>
+#import <wtf/BlockPtr.h>
 
 namespace TestWebKitAPI {
 
@@ -684,7 +686,7 @@ TEST_F(WKWebExtensionAPISidebar, SidebarActionClearWindowPanel)
     [manager loadAndRun];
 }
 
-TEST_F(WKWebExtensionAPISidebar, SidebarAcionClearTabPanel)
+TEST_F(WKWebExtensionAPISidebar, SidebarActionClearTabPanel)
 {
     auto *script = @[
         @"let tabs = await browser.tabs.query({})",
@@ -712,6 +714,204 @@ TEST_F(WKWebExtensionAPISidebar, SidebarAcionClearTabPanel)
     [manager openNewWindow];
 
     [manager loadAndRun];
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidebarActionOpenFailsWithoutUserGesture)
+{
+    auto *script = @[
+        @"await browser.sidebarAction.open()",
+        @"    .then(() => browser.test.notifyFail('sidebarAction.open() did not throw without user gesture'))",
+        @"    .catch(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int presentSidebarCallCount = 0;
+    int *presentSidebarCallCountPtr = &presentSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *) {
+        (*presentSidebarCallCountPtr)++;
+    };
+
+    [manager loadAndRun];
+    EXPECT_EQ(presentSidebarCallCount, 0);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidebarActionCloseFailsWithoutUserGesture)
+{
+    auto *script = @[
+        @"await browser.sidebarAction.close()",
+        @"    .then(() => browser.test.notifyFail('sidebarAction.close() did not throw without user gesture'))",
+        @"    .catch(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int closeSidebarCallCount = 0;
+    int *closeSidebarCallCountPtr = &closeSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.closeSidebar = ^(_WKWebExtensionSidebar *) {
+        (*closeSidebarCallCountPtr)++;
+    };
+
+    [manager loadAndRun];
+    EXPECT_EQ(closeSidebarCallCount, 0);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidebarActionToggleFailsWithoutUserGesture)
+{
+    auto *script = @[
+        @"await browser.sidebarAction.toggle()",
+        @"    .then(() => browser.test.notifyFail('sidebarAction.close() did not throw without user gesture'))",
+        @"    .catch(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int openSidebarCallCount = 0;
+    int *openSidebarCallCountPtr = &openSidebarCallCount;
+    int closeSidebarCallCount = 0;
+    int *closeSidebarCallCountPtr = &closeSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *) {
+        (*openSidebarCallCountPtr)++;
+    };
+    manager.get().internalDelegate.closeSidebar = ^(_WKWebExtensionSidebar *) {
+        (*closeSidebarCallCountPtr)++;
+    };
+
+    [manager loadAndRun];
+    EXPECT_EQ(openSidebarCallCount, 0);
+    EXPECT_EQ(closeSidebarCallCount, 0);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidebarActionOpenSucceedsWithUserGesture)
+{
+    auto *script = @[
+        @"browser.test.yield('Apply user gesture')",
+        @"await browser.sidebarAction.open()",
+        @"    .catch(() => browser.test.notifyFail('sidebarAction.open() threw with user gesture'))",
+        @"    .then(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int presentSidebarCallCount = 0;
+    int *presentSidebarCallCountPtr = &presentSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *sidebar) {
+        (*presentSidebarCallCountPtr)++;
+        EXPECT_NOT_NULL(sidebar.associatedTab);
+        EXPECT_NOT_NULL(sidebar.webExtensionContext);
+        EXPECT_NOT_NULL(sidebar.title);
+        EXPECT_NOT_NULL(sidebar.webView);
+        EXPECT_NOT_NULL(sidebar.viewController);
+
+        NSURL *webViewURL = sidebar.webView.URL;
+        EXPECT_NS_EQUAL(webViewURL.scheme, @"webkit-extension");
+        EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
+    };
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Apply user gesture");
+    [manager.get().context userGesturePerformedInTab:manager.get().defaultTab];
+    [manager run];
+
+    EXPECT_EQ(presentSidebarCallCount, 1);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidebarActionCloseSucceedsWithUserGesture)
+{
+    auto *script = @[
+        @"browser.test.yield('Apply user gesture')",
+        @"await browser.sidebarAction.open()",
+        @"    .catch(() => browser.test.notifyFail('sidebarAction.open() threw with user gesture'))",
+        @"    .then(() => browser.test.notifyPass())",
+        @"await browser.sidebarAction.close()",
+        @"    .catch(() => browser.test.notifyFail('sidebarAction.close() threw with user gesture'))",
+        @"    .then(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int closeSidebarCallCount = 0;
+    int *closeSidebarCallCountPtr = &closeSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *) { };
+    manager.get().internalDelegate.closeSidebar = ^(_WKWebExtensionSidebar *sidebar) {
+        (*closeSidebarCallCountPtr)++;
+
+        // Make sure all the properties are still there when delegate closeSidebar is called, since the sidebar is still displayed at the moment of the call
+        EXPECT_NOT_NULL(sidebar.associatedTab);
+        EXPECT_NOT_NULL(sidebar.webExtensionContext);
+        EXPECT_NOT_NULL(sidebar.title);
+        EXPECT_NOT_NULL(sidebar.webView);
+        EXPECT_NOT_NULL(sidebar.viewController);
+
+        NSURL *webViewURL = sidebar.webView.URL;
+        EXPECT_NS_EQUAL(webViewURL.scheme, @"webkit-extension");
+        EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
+    };
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Apply user gesture");
+    [manager.get().context userGesturePerformedInTab:manager.get().defaultTab];
+    [manager run];
+
+    EXPECT_EQ(closeSidebarCallCount, 1);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidebarActionToggleSucceedsWithUserGesture)
+{
+    auto *script = @[
+        @"browser.test.yield('Apply user gesture')",
+        @"await browser.sidebarAction.toggle()",
+        @"    .catch(() => browser.test.notifyFail('sidebarAction.toggle() threw with user gesture'))",
+        @"    .then(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int openSidebarCallCount = 0;
+    int *openSidebarCallCountPtr = &openSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *) {
+        (*openSidebarCallCountPtr)++;
+    };
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Apply user gesture");
+    [manager.get().context userGesturePerformedInTab:manager.get().defaultTab];
+    [manager run];
+
+    EXPECT_EQ(openSidebarCallCount, 1);
 }
 
 #pragma mark - SidePanel Tests
@@ -946,6 +1146,145 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelModifyTabEnable)
     [manager.get().defaultWindow openNewTab];
 
     [manager loadAndRun];
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabFailsWithoutUserGesture)
+{
+    auto *script = @[
+        @"let tabs = await browser.tabs.query({})",
+        @"await browser.sidePanel.open({ tabId: tabs[0].id })",
+        @"    .then(() => browser.test.notifyFail('sidePanel.open() did not throw without user gesture'))",
+        @"    .catch(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int presentSidebarCallCount = 0;
+    int *presentSidebarCallCountPtr = &presentSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidePanelManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *) {
+        (*presentSidebarCallCountPtr)++;
+    };
+
+    [manager loadAndRun];
+    EXPECT_EQ(presentSidebarCallCount, 0);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowFailsWithoutUserGesture)
+{
+    auto *script = @[
+        @"let window = await browser.windows.getCurrent()",
+        @"await browser.sidePanel.open({ windowId: window.id })",
+        @"    .then(() => browser.test.notifyFail('sidePanel.open() did not throw without user gesture'))",
+        @"    .catch(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int presentSidebarCallCount = 0;
+    int *presentSidebarCallCountPtr = &presentSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidePanelManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *) {
+        (*presentSidebarCallCountPtr)++;
+    };
+
+    [manager loadAndRun];
+    EXPECT_EQ(presentSidebarCallCount, 0);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabSucceedsWithUserGesture)
+{
+    auto *script = @[
+        @"browser.test.yield('Apply user gesture')",
+        @"let tabs = await browser.tabs.query({})",
+        @"await browser.sidePanel.open({ tabId: tabs[0].id }).catch(() => browser.test.notifyFail('sidePanel.open() threw with user gesture')).then(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int presentSidebarCallCount = 0;
+    int *presentSidebarCallCountPtr = &presentSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *sidebar) {
+        (*presentSidebarCallCountPtr)++;
+        EXPECT_NOT_NULL(sidebar.associatedTab);
+        EXPECT_NOT_NULL(sidebar.webExtensionContext);
+        EXPECT_NOT_NULL(sidebar.title);
+        EXPECT_NOT_NULL(sidebar.webView);
+        EXPECT_NOT_NULL(sidebar.viewController);
+
+        NSURL *webViewURL = sidebar.webView.URL;
+        EXPECT_NS_EQUAL(webViewURL.scheme, @"webkit-extension");
+        EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
+    };
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Apply user gesture");
+    [manager.get().context userGesturePerformedInTab:manager.get().defaultTab];
+    [manager run];
+
+    EXPECT_EQ(presentSidebarCallCount, 1);
+}
+
+TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowSucceedsWithUserGesture)
+{
+    auto *script = @[
+        @"browser.test.yield('Apply user gesture')",
+        @"let window = browser.windows.getCurrent()",
+        @"await browser.sidePanel.open({ windowId: window.id })",
+        @"    .catch(() => browser.test.notifyFail('sidePanel.open() threw with user gesture'))",
+        @"    .then(() => browser.test.notifyPass())",
+    ];
+
+    auto *resources = @{
+        @"background.js": Util::constructScript(script),
+        @"sidebar.html": @"<h1>Sidebar</h1>",
+    };
+
+    int presentSidebarCallCount = 0;
+    int *presentSidebarCallCountPtr = &presentSidebarCallCount;
+
+    auto manager = getManagerFor(resources, sidebarActionManifest);
+    auto *defaultWindow = [manager defaultWindow];
+    auto *newWindow = [manager openNewWindow];
+    [manager focusWindow:newWindow];
+
+    manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *sidebar) {
+        (*presentSidebarCallCountPtr)++;
+        EXPECT_NOT_NULL(sidebar.associatedTab);
+        EXPECT_NOT_NULL(sidebar.webExtensionContext);
+        EXPECT_NOT_NULL(sidebar.title);
+        EXPECT_NOT_NULL(sidebar.webView);
+        EXPECT_NOT_NULL(sidebar.viewController);
+
+        NSURL *webViewURL = sidebar.webView.URL;
+        EXPECT_NS_EQUAL(webViewURL.scheme, @"webkit-extension");
+        EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
+
+        EXPECT_TRUE([newWindow.tabs containsObject:sidebar.associatedTab]);
+        EXPECT_FALSE([defaultWindow.tabs containsObject:sidebar.associatedTab]);
+    };
+
+    [manager loadAndRun];
+
+    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Apply user gesture");
+    [manager.get().context userGesturePerformedInTab:manager.get().defaultTab];
+    [manager run];
+
+    EXPECT_EQ(presentSidebarCallCount, 1);
 }
 
 } // namespace TestWebKitAPI

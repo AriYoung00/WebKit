@@ -75,6 +75,10 @@ static auto *sidePanelManifest = @{
         @"type": @"module",
         @"persistent": @NO,
     },
+
+    @"side_panel": @{
+        @"default_path": @"sidebar.html",
+    },
 };
 
 static auto *sidebarActionAndPanelManifest = @{
@@ -1205,7 +1209,9 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabSucceedsWithUserGesture)
     auto *script = @[
         @"browser.test.yield('Apply user gesture')",
         @"let tabs = await browser.tabs.query({})",
-        @"await browser.sidePanel.open({ tabId: tabs[0].id }).catch(() => browser.test.notifyFail('sidePanel.open() threw with user gesture')).then(() => browser.test.notifyPass())",
+        @"await browser.sidePanel.open({ tabId: tabs[0].id })",
+        @"  .catch(() => browser.test.notifyFail('sidePanel.open() threw with user gesture'))",
+        @"  .then(() => browser.test.notifyPass())",
     ];
 
     auto *resources = @{
@@ -1216,7 +1222,7 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForTabSucceedsWithUserGesture)
     int presentSidebarCallCount = 0;
     int *presentSidebarCallCountPtr = &presentSidebarCallCount;
 
-    auto manager = getManagerFor(resources, sidebarActionManifest);
+    auto manager = getManagerFor(resources, sidePanelManifest);
     manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *sidebar) {
         (*presentSidebarCallCountPtr)++;
         EXPECT_NOT_NULL(sidebar.associatedTab);
@@ -1243,7 +1249,7 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowSucceedsWithUserGesture)
 {
     auto *script = @[
         @"browser.test.yield('Apply user gesture')",
-        @"let window = browser.windows.getCurrent()",
+        @"let window = await browser.windows.getCurrent()",
         @"await browser.sidePanel.open({ windowId: window.id })",
         @"    .catch(() => browser.test.notifyFail('sidePanel.open() threw with user gesture'))",
         @"    .then(() => browser.test.notifyPass())",
@@ -1257,10 +1263,10 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowSucceedsWithUserGesture)
     int presentSidebarCallCount = 0;
     int *presentSidebarCallCountPtr = &presentSidebarCallCount;
 
-    auto manager = getManagerFor(resources, sidebarActionManifest);
+    auto manager = getManagerFor(resources, sidePanelManifest);
     auto *defaultWindow = [manager defaultWindow];
     auto *newWindow = [manager openNewWindow];
-    [manager focusWindow:newWindow];
+    [manager focusWindow:defaultWindow];
 
     manager.get().internalDelegate.presentSidebar = ^(_WKWebExtensionSidebar *sidebar) {
         (*presentSidebarCallCountPtr)++;
@@ -1274,8 +1280,8 @@ TEST_F(WKWebExtensionAPISidebar, SidePanelOpenForWindowSucceedsWithUserGesture)
         EXPECT_NS_EQUAL(webViewURL.scheme, @"webkit-extension");
         EXPECT_NS_EQUAL(webViewURL.path, @"/sidebar.html");
 
-        EXPECT_TRUE([newWindow.tabs containsObject:sidebar.associatedTab]);
-        EXPECT_FALSE([defaultWindow.tabs containsObject:sidebar.associatedTab]);
+        EXPECT_FALSE([newWindow.tabs containsObject:sidebar.associatedTab]);
+        EXPECT_TRUE([defaultWindow.tabs containsObject:sidebar.associatedTab]);
     };
 
     [manager loadAndRun];

@@ -149,7 +149,7 @@ void WebExtensionAPISidebarAction::isOpen(NSDictionary *details, Ref<WebExtensio
     }
 
     std::optional<WebExtensionWindowIdentifier> windowId = maybeWindowId ? toWebExtensionWindowIdentifier(((NSNumber *) maybeWindowId).doubleValue) : std::nullopt;
-    if (!isValid(windowId)) {
+    if (windowId.has_value() && !isValid(windowId)) {
         *outExceptionString = toErrorString(nil, @"details", @"'windowId' is invalid");
         return;
     }

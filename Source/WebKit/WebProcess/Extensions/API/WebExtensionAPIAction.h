@@ -36,6 +36,8 @@ OBJC_CLASS NSString;
 
 namespace WebKit {
 
+NSString *dataURLFromImageData(JSValue *imageData, size_t *outWidth, NSString *sourceKey, NSString **outExceptionString);
+
 class WebExtensionAPIAction : public WebExtensionAPIObject, public JSWebExtensionWrappable {
     WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPIAction, action, action);
 
@@ -64,6 +66,7 @@ public:
 
 private:
     friend class WebExtensionAPIMenus;
+    friend class WebExtensionAPISidebarAction;
 
     static bool isValidDimensionKey(NSString *);
     static NSString *parseIconPath(NSString *path, const URL& baseURL);

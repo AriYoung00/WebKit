@@ -270,6 +270,17 @@ WebExtensionSidebar::WebExtensionSidebar(WebExtensionContext& context, std::opti
     else if (window)
         parent = context.defaultSidebar();
 
+    // Cheap hack to try to find parent if tab.value()->window() was nil
+    if (tab && !parent) {
+        RefPtr window = context.frontmostWindow();
+        for (auto const& maybeThisTab : window->tabs()) {
+            if (tab.value()->identifier() == maybeThisTab->identifier()) {
+                parent = context.getOrCreateSidebar(*window);
+                break;
+            }
+        }
+    }
+
     if (parent)
         parent.value()->addChild(*this);
 }

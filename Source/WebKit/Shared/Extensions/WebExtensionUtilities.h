@@ -36,6 +36,8 @@
 #ifdef __OBJC__
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/VectorCocoa.h>
+
+@class JSValue;
 #endif
 
 namespace WebKit {

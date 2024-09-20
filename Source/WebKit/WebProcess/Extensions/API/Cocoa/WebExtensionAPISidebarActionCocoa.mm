@@ -32,7 +32,9 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
 
+#import "CocoaHelpers.h"
 #import "MessageSenderInlines.h"
+#import "WebExtensionAPIAction.h"
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionSidebarParameters.h"
 #import "WebExtensionTabIdentifier.h"
@@ -45,6 +47,9 @@ static NSString * const tabIdKey = @"tabId";
 static NSString * const windowIdKey = @"windowId";
 static NSString * const panelKey = @"panel";
 static NSString * const titleKey = @"title";
+static NSString * const iconImagePathKey = @"path";
+static NSString * const iconImageDataKey = @"imageData";
+static NSString * const iconImageVariantsKey = @"variants";
 
 static ParseResult parseSidebarActionDetails(NSDictionary *details)
 {
@@ -264,11 +269,85 @@ void WebExtensionAPISidebarAction::setTitle(NSDictionary *details, Ref<WebExtens
     }, extensionContext().identifier());
 }
 
-void WebExtensionAPISidebarAction::setIcon(NSDictionary *details, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
+void WebExtensionAPISidebarAction::setIcon(WebFrame& frame, NSDictionary *details, Ref<WebExtensionCallbackHandler>&& callback, NSString **outExceptionString)
 {
-    // FIXME: <https://webkit.org/b/276833> Implement icon-related functionality
-    static NSString * const apiName = @"sidebarAction.setIcon()";
-    callback->reportError([NSString stringWithFormat:@"'%@' is unimplemented", apiName]);
+    auto result = parseSidebarActionDetails(details);
+    if ((*outExceptionString = indicatesError(result).get()))
+        return;
+
+    const auto [windowId, tabId] = getIdentifiers(result);
+
+    if (details[iconImagePathKey] && details[iconImageDataKey]) {
+        *outExceptionString = toErrorString(nil, @"details", @"it cannot specify both 'path' and 'imageData'");
+        return;
+    }
+
+    static NSDictionary<NSString *, id> *types = @{
+        iconImagePathKey: [NSOrderedSet orderedSetWithObjects:NSString.class, NSDictionary.class, NSNull.class, nil],
+        iconImageDataKey: [NSOrderedSet orderedSetWithObjects:JSValue.class, NSDictionary.class, NSNull.class, nil],
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+        iconImageVariantsKey: [NSOrderedSet orderedSetWithObjects:@[ NSDictionary.class ], NSNull.class, nil],
+#endif
+    };
+
+    if (!validateDictionary(details, @"details", nil, types, outExceptionString))
+        return;
+
+    if (details[iconImagePathKey] && details[iconImageDataKey]) {
+        *outExceptionString = toErrorString(nil, @"details", @"it cannot specify both 'path' and 'imageData'");
+        return;
+    }
+
+    NSDictionary *iconDictionary;
+
+    if (auto *imageData = objectForKey<JSValue>(details, iconImageDataKey)) {
+        size_t width;
+        auto *dataURLString = dataURLFromImageData(imageData, &width, iconImageDataKey, outExceptionString);
+        if (!dataURLString)
+            return;
+
+        iconDictionary = @{ @(width).stringValue: dataURLString };
+    }
+
+    if (auto *images = objectForKey<NSDictionary>(details, iconImageDataKey)) {
+        iconDictionary = WebExtensionAPIAction::parseIconImageDataDictionary(images, false, iconImageDataKey, outExceptionString);
+        if (!iconDictionary)
+            return;
+    }
+
+    if (auto *path = objectForKey<NSString>(details, iconImagePathKey)) {
+        // Chrome documentation states that 'details.path = foo' is equivalent to 'details.path = { '16': foo }'.
+        // Documentation: https://developer.chrome.com/docs/extensions/reference/action/#method-setIcon
+        iconDictionary = @{ @"16": WebExtensionAPIAction::parseIconPath(path, frame.url()) };
+    }
+
+    if (auto *paths = objectForKey<NSDictionary>(details, iconImagePathKey)) {
+        iconDictionary = WebExtensionAPIAction::parseIconPathsDictionary(paths, frame.url(), false, iconImagePathKey, outExceptionString);
+        if (!iconDictionary)
+            return;
+    }
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+    NSArray *iconVariants;
+    if (auto *variants = objectForKey<NSArray>(details, iconImageVariantsKey)) {
+        iconVariants = WebExtensionAPIAction::parseIconVariants(variants, frame.url(), iconImageVariantsKey, outExceptionString);
+        if (!iconVariants)
+            return;
+    }
+
+    auto *iconsJSON = encodeJSONString(iconVariants ?: iconDictionary, JSONOptions::FragmentsAllowed);
+#else
+    auto *iconsJSON = encodeJSONString(iconDictionary);
+#endif
+
+    WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::SidebarSetIcon(windowId, tabId, iconsJSON), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<void, WebExtensionError>&& result) {
+        if (!result) {
+            callback->reportError(result.error());
+            return;
+        }
+
+        callback->call();
+    }, extensionContext().identifier());
 }
 
 } // namespace WebKit

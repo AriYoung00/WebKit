@@ -76,7 +76,7 @@ public:
     void setPanel(NSDictionary *details, Ref<WebExtensionCallbackHandler>&&, NSString **outExceptionString);
     void getTitle(NSDictionary *details, Ref<WebExtensionCallbackHandler>&&, NSString **outExceptionString);
     void setTitle(NSDictionary *details, Ref<WebExtensionCallbackHandler>&&, NSString **outExceptionString);
-    void setIcon(NSDictionary *details, Ref<WebExtensionCallbackHandler>&&, NSString **outExceptionString);
+    void setIcon(WebFrame&, NSDictionary *details, Ref<WebExtensionCallbackHandler>&&, NSString **outExceptionString);
 #endif // PLATFORM(COCOA)
 };
 

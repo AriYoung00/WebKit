@@ -38,6 +38,7 @@
 #import "WebExtensionAPITabs.h"
 #import "WebExtensionMessageSenderParameters.h"
 #import <objc/runtime.h>
+#import <JavaScriptCore/JSValue.h>
 
 namespace WebKit {
 

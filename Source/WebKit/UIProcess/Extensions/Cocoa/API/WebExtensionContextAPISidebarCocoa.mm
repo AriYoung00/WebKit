@@ -32,6 +32,7 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
 
+#import "CocoaHelpers.h"
 #import "WKWebExtensionControllerDelegatePrivate.h"
 #import "WebExtensionSidebar.h"
 
@@ -339,7 +340,21 @@ void WebExtensionContext::sidebarToggle(CompletionHandler<void(Expected<void, We
 
 void WebExtensionContext::sidebarSetIcon(const std::optional<WebExtensionWindowIdentifier> windowIdentifier, const std::optional<WebExtensionTabIdentifier> tabIdentifier, const String& iconJSON, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
 {
-    // FIXME: <https://webkit.org/b/276833> implement icon-related methods
+    NSString * const apiName = @"sidebarAction.setIcon()";
+
+    auto sidebar = getOrCreateSidebarWithIdentifiers(windowIdentifier, tabIdentifier, *this);
+    if (!sidebar) {
+        completionHandler(toWebExtensionError(apiName, @"details", sidebar.error()));
+        return;
+    }
+
+    id parsedIcons = parseJSON(iconJSON, JSONOptions::FragmentsAllowed);
+    if (auto *dictionary = dynamic_objc_cast<NSDictionary>(parsedIcons))
+        sidebar.value()->setIconsDictionary(dictionary);
+    else
+        sidebar.value()->setIconsDictionary(nil);
+
+    completionHandler({ });
 }
 
 void WebExtensionContext::sidebarGetTitle(const std::optional<WebExtensionWindowIdentifier> windowIdentifier, const std::optional<WebExtensionTabIdentifier> tabIdentifier, CompletionHandler<void(Expected<String, WebExtensionError>&&)>&& completionHandler)

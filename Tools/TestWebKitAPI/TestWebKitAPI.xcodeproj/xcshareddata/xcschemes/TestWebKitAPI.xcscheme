@@ -67,7 +67,15 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "--gtest_filter=ContentRuleList.ResourceTypes"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--gtest_filter=&quot;WKWebExtensionAPISidebar.SidePanelOpensSidebarOnActionClickWhenConfigured&quot;"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--gtest_filter=&quot;WKWebExtensionAPISidebar.SidebarActionOpenSucceedsWithUserGesture&quot;"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

@@ -38,6 +38,6 @@
     [RaisesException] void setPanel([NSDictionary=NullAllowed] any details, [Optional, CallbackHandler] function callback);
     [RaisesException] void getTitle([NSDictionary=NullAllowed] any details, [Optional, CallbackHandler] function callback);
     [RaisesException] void setTitle([NSDictionary=NullAllowed] any details, [Optional, CallbackHandler] function callback);
-    [RaisesException] void setIcon([NSDictionary=NullAllowed] any details, [Optional, CallbackHandler] function callback);
+    [RaisesException, NeedsFrame] void setIcon([NSDictionary=NullAllowed] any details, [Optional, CallbackHandler] function callback);
 
 };

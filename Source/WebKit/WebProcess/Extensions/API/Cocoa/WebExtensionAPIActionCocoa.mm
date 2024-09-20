@@ -281,7 +281,7 @@ void WebExtensionAPIAction::isEnabled(NSDictionary *details, Ref<WebExtensionCal
     }, extensionContext().identifier());
 }
 
-static NSString *dataURLFromImageData(JSValue *imageData, size_t *outWidth, NSString *sourceKey, NSString **outExceptionString)
+NSString *dataURLFromImageData(JSValue *imageData, size_t *outWidth, NSString *sourceKey, NSString **outExceptionString)
 {
     if (outWidth)
         *outWidth = 0;
